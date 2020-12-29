@@ -7,26 +7,20 @@ from django.db.models import Index
 class DatabaseIntrospection(BaseDatabaseIntrospection):
     # Maps type codes to Django Field types.
     data_types_reverse = {
-        16: 'BooleanField',
-        17: 'BinaryField',
-        20: 'BigIntegerField',
-        21: 'SmallIntegerField',
-        23: 'IntegerField',
-        25: 'TextField',
-        700: 'FloatField',
-        701: 'FloatField',
-        869: 'GenericIPAddressField',
-        1042: 'CharField',  # blank-padded
-        1043: 'CharField',
-        1082: 'DateField',
-        1083: 'TimeField',
-        1114: 'DateTimeField',
-        1184: 'DateTimeField',
-        1186: 'DurationField',
-        1266: 'TimeField',
-        1700: 'DecimalField',
-        2950: 'UUIDField',
-        3802: 'JSONField',
+        0: 'IntegerField',
+        1: 'FloatField',
+        2: 'CharField',
+        3: 'DateField',
+        4: 'DateTimeField',
+        5: 'CharField',
+        6: 'DateTimeField',
+        7: 'DateTimeField',
+        8: 'DateTimeField',
+        9: '',
+        10: '',
+        11: 'BinaryField',
+        12: 'TimeField',
+        13: 'BooleanField',
     }
 
     ignored_tables = []
@@ -44,15 +38,9 @@ class DatabaseIntrospection(BaseDatabaseIntrospection):
 
     def get_table_list(self, cursor):
         """Return a list of table and view names in the current database."""
-        cursor.execute("""
-            SELECT c.relname,
-            CASE WHEN {} THEN 'p' WHEN c.relkind IN ('m', 'v') THEN 'v' ELSE 't' END
-            FROM pg_catalog.pg_class c
-            LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-            WHERE c.relkind IN ('f', 'm', 'p', 'r', 'v')
-                AND n.nspname NOT IN ('pg_catalog', 'pg_toast')
-                AND pg_catalog.pg_table_is_visible(c.oid)
-        """.format('c.relispartition' if self.connection.features.supports_table_partitions else 'FALSE'))
+        # TODO: replace "Risk" in query with schema in connection params
+        query = """SELECT "TABLE_NAME", CASE WHEN "TABLE_TYPE" = 'BASE TABLE' THEN 't' WHEN "TABLE_TYPE" = 'VIEW' THEN 'v' END AS "TYPE" FROM "INFORMATION_SCHEMA"."TABLES" WHERE "TABLE_SCHEMA" = 'RISK'"""
+        cursor.execute(query)
         return [TableInfo(*row) for row in cursor.fetchall() if row[0] not in self.ignored_tables]
 
     def get_table_description(self, cursor, table_name):
